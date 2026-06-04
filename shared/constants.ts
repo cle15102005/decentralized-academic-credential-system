@@ -1,10 +1,15 @@
 // shared/constants.ts
 
 export const CONTRACT_ADDRESSES = {
+  // My honies, run this command to deploy on your local Hardhat network to test your next code: 
+  // terminal 1: "cd contracts; npx hardhat node" (1 command not 2)
+  // terminal 2: "cd contracts; npx hardhat run ../scripts/deploy/deploy.ts --network localhost"
+  // After you deploy, copy the addresses from the terminal output and paste them into the "local" section below
+
   local: {
-    registry: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    registry: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", // This is just a test address from the local Hardhat network, it will be different for each of you when you deploy
     verifier: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-  },
+  }, 
   sepolia: {
     registry: "", // We will fill this in later when deploying to the live testnet
     verifier: ""
