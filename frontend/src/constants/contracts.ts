@@ -6,11 +6,13 @@
 
 // ─── Deployed addresses ──────────────────────────────────────────
 export const REGISTRY_ADDRESS = (
-  import.meta.env.VITE_REGISTRY_ADDRESS || '0x0000000000000000000000000000000000000000'
+  import.meta.env.VITE_REGISTRY_ADDRESS || 
+  '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512' // Default Hardhat Local
 ) as `0x${string}`
 
 export const VERIFIER_ADDRESS = (
-  import.meta.env.VITE_VERIFIER_ADDRESS || '0x0000000000000000000000000000000000000000'
+  import.meta.env.VITE_VERIFIER_ADDRESS || 
+  '0x5FbDB2315678afecb367f032d93F642f64180aa3' // Default Hardhat Local
 ) as `0x${string}`
 
 // ─── CredentialRegistry ABI ──────────────────────────────────────
@@ -20,6 +22,16 @@ export const REGISTRY_ABI = [
     inputs: [{ internalType: 'address', name: 'initialOwner', type: 'address' }],
     stateMutability: 'nonpayable',
     type: 'constructor',
+  },
+  {
+    inputs: [{ internalType: 'address', name: 'owner', type: 'address' }],
+    name: 'OwnableInvalidOwner',
+    type: 'error',
+  },
+  {
+    inputs: [{ internalType: 'address', name: 'account', type: 'address' }],
+    name: 'OwnableUnauthorizedAccount',
+    type: 'error',
   },
   {
     anonymous: false,

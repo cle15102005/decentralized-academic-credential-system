@@ -11,8 +11,8 @@ export const CONTRACT_ADDRESSES = {
     verifier: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
   }, 
   sepolia: {
-    registry: "", // We will fill this in later when deploying to the live testnet
-    verifier: ""
+    registry: "0x8AF83A4F2d5B4584d6cb9C85b5D018326eb94cf3", // We will fill this in later when deploying to the live testnet
+    verifier: "0x0F79D6c7B3BC1138fb47318c77FfD777057d3241"
   }
 };
 

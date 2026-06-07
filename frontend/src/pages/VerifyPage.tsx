@@ -123,18 +123,18 @@ export default function VerifyPage() {
     // ── Step 3: Revocation (on-chain) ─────────────────────────
     patch(3, { status: 'running' }); await delay(300)
     try {
-      const rev = await publicClient.readContract({
+      const [revoked, revokedAt] = await publicClient.readContract({
         address:      REGISTRY_ADDRESS,
         abi:          REGISTRY_ABI,
         functionName: 'revocations',
         args:         [proof.credentialHash as `0x${string}`],
       }) as readonly [boolean, bigint]
-      const notRevoked = !rev[0]
+      const notRevoked = !revoked
       patch(3, {
         status: notRevoked ? 'pass' : 'fail',
         info:   notRevoked
           ? 'Credential is not revoked'
-          : `Revoked at ${fmt(Number(rev[1]))}`,
+          : `Revoked at ${fmt(Number(revokedAt))}`,
       })
       if (!notRevoked) { setRunning(false); setDone(true); return }
     } catch (e: unknown) {
