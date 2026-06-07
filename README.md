@@ -62,6 +62,7 @@ Open http://localhost:5173 - connect MetaMask on **Sepolia** - follow the [Front
 |-------|----------|----------|
 | [Frontend README](./frontend/README.md) | Demo, presentation | Setup, MetaMask, UI walkthrough |
 | [Scripts README](./scripts/README.md) | Developers, CI | CLI commands, when to use scripts vs UI |
+| [Architecture](./docs/architecture.md) | All | General system architecture | 
 
 ---
 
