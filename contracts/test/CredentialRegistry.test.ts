@@ -70,8 +70,8 @@ describe("CredentialRegistry", function () {
       // Ensure it is valid right now
       expect(await registry.isValidAt(fakeCredentialHash, timestampBeforeRevoke)).to.equal(true);
 
-      // 2. Revoke the credential (Simulating Alice getting caught cheating)
-      await registry.connect(owner).revoke(fakeCredentialHash);
+      // 2. Revoke the credential (university revokes degree they issued)
+      await registry.connect(university).revoke(fakeCredentialHash);
       
       // Check the new state
       const [, revokedAt] = await registry.revocations(fakeCredentialHash);
@@ -79,6 +79,20 @@ describe("CredentialRegistry", function () {
       // 3. Time travel check: It should be valid BEFORE the revocation, but invalid AFTER
       expect(await registry.isValidAt(fakeCredentialHash, timestampBeforeRevoke)).to.equal(true);
       expect(await registry.isValidAt(fakeCredentialHash, revokedAt + 1n)).to.equal(false);
+    });
+
+    it("Should reject another university from revoking", async function () {
+      const { registry, owner, university, randomPerson } = await deployRegistryFixture();
+      await registry.connect(owner).addIssuer(university.address);
+      await registry.connect(owner).addIssuer(randomPerson.address);
+
+      const hash = ethers.id("Alice_Degree_003");
+      const root = ethers.id("Merkle_Root_DEF");
+      await registry.connect(university).anchor(hash, root);
+
+      await expect(registry.connect(randomPerson).revoke(hash)).to.be.revertedWith(
+        "Only the issuing university can revoke"
+      );
     });
   });
 });

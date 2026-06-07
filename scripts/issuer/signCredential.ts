@@ -1,22 +1,41 @@
+/**
+ * scripts/issuer/signCredential.ts
+ *
+ * ECDSA-sign a credential bundle with the university wallet (EIP-191 personal_sign).
+ * Requires courses to already have real salts and a merkleRoot from holder:tree.
+ *
+ * Actor: University (issuer) — step 3 of the CLI pipeline.
+ * Run:   npm run issuer:sign -- <credential-with-merkle.json> [output.json]
+ *
+ * Uses:  @credchain/shared/logic (computeCredentialHash)
+ * Env:   UNIVERSITY_PRIVATE_KEY, RPC_URL in scripts/.env
+ *
+ * Browser equivalent: frontend/src/lib/credential.ts → signAndBuildCredential()
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import { CredentialBundle, SignedCredential } from "@credchain/shared/types";
-import { computeCredentialHash } from "./buildCredential";
+import { computeCredentialHash, ZERO_HASH } from "@credchain/shared/logic";
 import { walletFromEnv } from "./walletFromEnv";
 
 dotenv.config();
 
+/**
+ * Recompute credentialHash with final salts, sign with wallet, return SignedCredential.
+ * Used by: CLI main block. Same logic as frontend IssuePage (sign step).
+ */
 export async function signCredential(
   bundle: CredentialBundle,
   wallet: ethers.Wallet,
   merkleRoot: string
 ): Promise<SignedCredential> {
-  if (!merkleRoot || merkleRoot === ethers.ZeroHash) {
+  if (!merkleRoot || merkleRoot === ZERO_HASH) {
     throw new Error("merkleRoot is required — run holder:tree first");
   }
-  if (!bundle.courses.every((c) => c.salt && c.salt !== ethers.ZeroHash)) {
+  if (!bundle.courses.every((c) => c.salt && c.salt !== ZERO_HASH)) {
     throw new Error("All courses must have salts — run holder:tree first");
   }
 
@@ -32,6 +51,7 @@ export async function signCredential(
   };
 }
 
+/** Parse credential JSON from buildCredential + buildMerkleTree output. */
 function loadBundleFromFile(filePath: string): { bundle: CredentialBundle; merkleRoot: string } {
   const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
 

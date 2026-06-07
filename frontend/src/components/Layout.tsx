@@ -1,11 +1,21 @@
+/**
+ * frontend/src/components/Layout.tsx
+ *
+ * App shell: header nav (Issue / Prove / Verify), WalletConnect, footer.
+ * Wraps all pages rendered by App.tsx.
+ */
+
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import WalletConnect from './WalletConnect'
+import { APP_NETWORK, NETWORK_LABEL } from '../constants/network'
 
 const LINKS = [
-  { to: '/issue',  icon: '✦', label: 'Issue',  sub: 'University' },
-  { to: '/prove',  icon: '◈', label: 'Prove',  sub: 'Student'    },
-  { to: '/verify', icon: '◉', label: 'Verify', sub: 'Employer'   },
+  { to: '/issue',       icon: '✦', label: 'Issue',       sub: 'University' },
+  { to: '/credentials', icon: '▤', label: 'Credentials', sub: 'University' },
+  { to: '/prove',       icon: '◈', label: 'Prove',       sub: 'Student'    },
+  { to: '/verify',      icon: '◉', label: 'Verify',      sub: 'Employer'   },
+  { to: '/admin',       icon: '⚙', label: 'Admin',       sub: 'Owner'      },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
@@ -63,13 +73,13 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main style={{ flex: 1, maxWidth: 960, width: '100%', margin: '0 auto', padding: '40px 24px' }}>
+      <main style={{ flex: 1, maxWidth: 1080, width: '100%', margin: '0 auto', padding: '40px 24px' }}>
         {children}
       </main>
 
       <footer style={{ textAlign: 'center', padding: '18px 24px', borderTop: '1px solid var(--border)' }}>
         <span style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-          CredChain · Decentralized Academic Credential · HUST 2025
+          CredChain · {NETWORK_LABEL[APP_NETWORK]} · HUST 2025
         </span>
       </footer>
     </div>

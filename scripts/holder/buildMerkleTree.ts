@@ -1,46 +1,22 @@
-import { randomBytes } from "crypto";
-import { StandardMerkleTree } from "@openzeppelin/merkle-tree";
-import { Course } from "@credchain/shared/types";
-import { ethers } from "ethers";
+/**
+ * scripts/holder/buildMerkleTree.ts
+ *
+ * CLI wrapper around @credchain/shared/merkle → buildMerkleTree().
+ * Assigns random salts to courses and writes merkleRoot back into the credential JSON.
+ *
+ * Actor: University or Student — step 2 of CLI pipeline (after buildCredential).
+ * Run:   npm run holder:tree -- <credential.json> [output.json]
+ *
+ * Browser equivalent: frontend IssuePage step 2 (before sign + anchor)
+ */
 
-export interface MerkleTreeResult {
-  tree: StandardMerkleTree<[string, string, string]>;
-  root: string;
-  courses: Course[];
-}
+import { buildMerkleTree, type MerkleTreeResult } from "@credchain/shared/merkle";
 
-export function buildMerkleTree(
-  courses: { name: string; grade: string; salt?: string }[]
-): MerkleTreeResult {
-  if (courses.length === 0) {
-    throw new Error("At least one course is required to build a Merkle tree");
-  }
-
-  const coursesWithSalts: Course[] = courses.map((course) => {
-  const isPlaceholder = !course.salt || course.salt === "0x0000000000000000000000000000000000000000000000000000000000000000";
-  
-  return {
-    name: course.name,
-    grade: course.grade,
-    salt: isPlaceholder ? ethers.hexlify(randomBytes(32)) : (course.salt as string),
-  };
-});
-
-  const rows: [string, string, string][] = coursesWithSalts.map((c) => [
-    c.name,
-    c.grade,
-    c.salt,
-  ]);
-
-  const tree = StandardMerkleTree.of(rows, ["string", "string", "bytes32"]);
-  const root = tree.root;
-
-  return { tree, root, courses: coursesWithSalts };
-}
+export type { MerkleTreeResult };
+export { buildMerkleTree };
 
 if (require.main === module) {
   const fs = require("fs");
-  const path = require("path");
 
   const inputPath = process.argv[2];
   if (!inputPath) {

@@ -1,3 +1,16 @@
+/**
+ * scripts/holder/exportProof.ts
+ *
+ * Build a ProofPackage JSON file for selective disclosure.
+ * Combines signed credential metadata with Merkle proofs for chosen courses.
+ *
+ * Actor: Student (holder) — produces proof.json for employers.
+ * Run:   npm run holder:export -- <signedCredential.json> <course1,course2> <output/proof.json>
+ *
+ * Uses:  generateProofFromCourses (shared/merkle), buildProofPackage (this file)
+ * Browser equivalent: frontend/src/pages/ProvePage.tsx (download proof.json)
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 import {
@@ -7,6 +20,10 @@ import {
 } from "@credchain/shared/types";
 import { generateProofFromCourses } from "./generateProof";
 
+/**
+ * Assemble ProofPackage from signed credential + disclosed courses.
+ * Used by: CLI main block and any library consumer.
+ */
 export function buildProofPackage(
   signedCredential: SignedCredential,
   disclosedCourses: DisclosedCourse[]
@@ -21,6 +38,7 @@ export function buildProofPackage(
   };
 }
 
+/** Write ProofPackage JSON to disk. */
 export function exportProof(
   proofPackage: ProofPackage,
   outputPath: string

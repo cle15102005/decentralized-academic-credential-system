@@ -1,5 +1,8 @@
 # Credential System Instructions
 
+> **Start here:** [scripts/README.md](./README.md) — overview, when to use CLI vs frontend, quick commands.  
+> This file is the **extended reference** (schemas, verification steps, troubleshooting).
+
 This guide covers the full off-chain pipeline: **issuer** (build, sign, anchor), **holder** (Merkle tree + selective disclosure), and **verifier** (6-step validation).
 
 ## Task ownership (team division)
@@ -207,7 +210,7 @@ Step 5 compares `proofPackage.merkleRoot` to `registry.merkleRoots(credentialHas
 
 | File | What it does |
 |------|--------------|
-| `buildCredential.ts` | Validates student data, sets expiry (graduation + 50 years), assigns placeholder salts, and computes `credentialHash` via sorted JSON + `keccak256`. |
+| `buildCredential.ts` | CLI wrapper around `@credchain/shared/logic` → `buildCredentialBundle()`. |
 | `signCredential.ts` | Recomputes hash after salts are added, signs `credentialHash` with EIP-191 (`signMessage` over 32-byte hash), returns `SignedCredential`. Loads `UNIVERSITY_PRIVATE_KEY` from `.env`. |
 | `anchorCredential.ts` | Calls `registry.anchor(credentialHash, merkleRoot)` on-chain and saves the signed credential to `data/issued/{studentId}.json`. |
 
@@ -215,7 +218,8 @@ Step 5 compares `proofPackage.merkleRoot` to `registry.merkleRoots(credentialHas
 
 | File | What it does |
 |------|--------------|
-| `merkleUtils.ts` | Low-level hashing helpers. `hashLeaf()` matches `MerkleVerifier.hashLeaf` on-chain; `standardTreeLeaf()` produces the double-hash leaf node used by `StandardMerkleTree` and `MerkleProof.verify`. |
+| `@credchain/shared/logic` | Shared crypto: `computeCredentialHash`, `buildCredentialBundle`, `hashLeaf`, `standardTreeLeaf`. Used by scripts and frontend. |
+| `@credchain/shared/merkle` | Shared Merkle tree: `buildMerkleTree`, `generateProof`, `generateProofFromCourses`. Used by scripts and frontend. |
 | `buildMerkleTree.ts` | Generates a random 32-byte salt per course, builds an OpenZeppelin `StandardMerkleTree`, and returns `{ tree, root, courses }`. CLI mode reads a credential JSON, adds salts, and writes back `merkleRoot`. |
 | `generateProof.ts` | Selective disclosure: given a tree and a list of course names, returns `DisclosedCourse[]` with name, grade, salt, and sibling proof hashes. Unselected courses stay private. |
 | `exportProof.ts` | Combines a `SignedCredential` with disclosed courses into a `ProofPackage` and writes `proof.json` to disk. |
@@ -267,11 +271,10 @@ The per-course **salt** stops verifiers from guessing grade combinations by brut
 ## Importing as a library
 
 ```typescript
-import { buildCredential, computeCredentialHash } from "./issuer/buildCredential";
+import { buildCredentialBundle, computeCredentialHash } from "@credchain/shared/logic";
+import { buildMerkleTree, generateProof } from "@credchain/shared/merkle";
 import { signCredential } from "./issuer/signCredential";
 import { anchorCredential } from "./issuer/anchorCredential";
-import { buildMerkleTree } from "./holder/buildMerkleTree";
-import { generateProof } from "./holder/generateProof";
 import { buildProofPackage, exportProof } from "./holder/exportProof";
 import { verifyCredential } from "./verifier/verifyCredential";
 import type { ProofPackage, VerificationResult } from "@credchain/shared/types";

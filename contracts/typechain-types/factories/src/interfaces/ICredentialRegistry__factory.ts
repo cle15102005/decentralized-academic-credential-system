@@ -117,6 +117,25 @@ const _abi = [
         name: "credentialHash",
         type: "bytes32",
       },
+    ],
+    name: "credentialIssuers",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "bytes32",
+        name: "credentialHash",
+        type: "bytes32",
+      },
       {
         internalType: "uint256",
         name: "timestamp",

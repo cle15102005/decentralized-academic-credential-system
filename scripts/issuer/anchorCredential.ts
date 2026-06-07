@@ -1,3 +1,18 @@
+/**
+ * scripts/issuer/anchorCredential.ts
+ *
+ * Anchor a signed credential on CredentialRegistry (on-chain tx).
+ * Calls registry.anchor(credentialHash, merkleRoot) from the issuer wallet.
+ *
+ * Actor: University (issuer) — step 4 of the CLI pipeline.
+ * Run:   npm run issuer:anchor -- <signed-credential.json> [output-dir]
+ *
+ * Uses:  @credchain/shared/constants (REGISTRY_ABI, CONTRACT_ADDRESSES)
+ * Env:   UNIVERSITY_PRIVATE_KEY, RPC_URL, REGISTRY_ADDRESS, NETWORK
+ *
+ * Browser equivalent: frontend/src/hooks/useRegistry.ts → useAnchor()
+ */
+
 import * as fs from "fs";
 import * as path from "path";
 import { ethers } from "ethers";
@@ -8,6 +23,10 @@ import { walletFromEnv } from "./walletFromEnv";
 
 dotenv.config();
 
+/**
+ * Submit anchor transaction. Verifies wallet is a registered issuer first.
+ * Used by: CLI main block.
+ */
 export async function anchorCredential(
   signedCredential: SignedCredential,
   wallet: ethers.Wallet,
@@ -35,6 +54,7 @@ export async function anchorCredential(
   return receipt;
 }
 
+/** Save SignedCredential JSON to data/issued/ (or custom output dir). */
 export function saveIssuedCredential(
   signedCredential: SignedCredential,
   outputDir: string

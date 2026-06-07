@@ -17,7 +17,7 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@credchain/shared": ["../shared/index.ts"],
+      "@credchain/shared": ["../shared/types.ts"],
       "@credchain/shared/*": ["../shared/*"]
     }
   },

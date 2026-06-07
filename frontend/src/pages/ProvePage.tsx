@@ -1,17 +1,18 @@
 /**
- * ProvePage.tsx  —  Actor: Student (Holder)
+ * frontend/src/pages/ProvePage.tsx — Student (Holder)
  *
- * Real flow (mirrors scripts/holder/exportProof.ts):
- *   1. Upload SignedCredential JSON (output from IssuePage)
- *   2. Select courses to disclose
- *   3. generateProof() → DisclosedCourse[] with Merkle sibling hashes
- *   4. buildProofPackage() → ProofPackage
- *   5. Download proof.json
+ * Selective disclosure flow (mirrors scripts/holder/exportProof.ts):
+ *   1. Upload SignedCredential JSON from Issue step
+ *   2. Select courses to reveal (others stay private)
+ *   3. buildMerkleTree       — @credchain/shared/merkle (rebuild from stored salts)
+ *   4. Root check            — must match credential.merkleRoot
+ *   5. generateProof         — @credchain/shared/merkle (sibling paths per course)
+ *   6. Download              — proof.json for employers
  */
 
 import { useState, useRef, useCallback } from 'react'
 import type { SignedCredential, ProofPackage } from '@credchain/shared/types'
-import { buildMerkleTree, generateProof }      from '../lib/merkle'
+import { buildMerkleTree, generateProof }      from '@credchain/shared/merkle'
 
 // ─────────────────────────────────────────────────────────────────
 const fmt = (ts: number) =>
@@ -75,8 +76,13 @@ export default function ProvePage() {
        * will keep them as-is (they're not ZeroHash).
        * This mirrors: scripts/holder/generateProof.ts → generateProofFromCourses()
        */
-      const treeResult   = buildMerkleTree(credential.bundle.courses)
-      const disclosed    = generateProof(treeResult, [...selected])
+      const treeResult = buildMerkleTree(credential.bundle.courses)
+      if (treeResult.root.toLowerCase() !== credential.merkleRoot.toLowerCase()) {
+        throw new Error(
+          'Merkle root mismatch — credential data may be corrupted or edited after issuance'
+        )
+      }
+      const disclosed = generateProof(treeResult, [...selected])
 
       const proofPackage: ProofPackage = {
         credentialHash:  credential.bundle.credentialHash,
@@ -143,8 +149,8 @@ export default function ProvePage() {
           Disclosed Courses
         </h4>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-          {proof.disclosedCourses.map(c => (
-            <div key={c.name} style={{
+          {proof.disclosedCourses.map((c, i) => (
+            <div key={`${c.name}-${i}`} style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
               background: 'var(--green-dim)', border: '1px solid rgba(74,222,128,.25)',
               borderRadius: 8, padding: '10px 14px',
@@ -239,10 +245,10 @@ export default function ProvePage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
-          {credential.bundle.courses.map(c => {
+          {credential.bundle.courses.map((c, i) => {
             const checked = selected.has(c.name)
             return (
-              <div key={c.name}
+              <div key={`${c.name}-${i}`}
                 className={`checkbox-row ${checked ? 'checked' : ''}`}
                 onClick={() => toggle(c.name)}
               >

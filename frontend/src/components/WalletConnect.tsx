@@ -1,3 +1,10 @@
+/**
+ * frontend/src/components/WalletConnect.tsx
+ *
+ * MetaMask / injected wallet connect button in the header.
+ * Used by: Layout.tsx. Required for IssuePage (sign + anchor txs).
+ */
+
 import { useState } from 'react'
 import { useAccount, useConnect, useDisconnect, useChainId } from 'wagmi'
 

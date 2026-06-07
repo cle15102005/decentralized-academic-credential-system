@@ -1,5 +1,18 @@
+/**
+ * scripts/issuer/walletFromEnv.ts
+ *
+ * Load the university issuer wallet from scripts/.env.
+ * Shared by issuer/signCredential.ts and issuer/anchorCredential.ts.
+ *
+ * Env: UNIVERSITY_PRIVATE_KEY (64 hex chars, with or without 0x prefix)
+ */
+
 import { ethers } from "ethers";
 
+/**
+ * Create an ethers Wallet connected to the given RPC provider.
+ * Throws if UNIVERSITY_PRIVATE_KEY is missing or malformed.
+ */
 export function walletFromEnv(provider: ethers.Provider): ethers.Wallet {
   const privateKey = process.env.UNIVERSITY_PRIVATE_KEY?.trim();
   if (!privateKey) {

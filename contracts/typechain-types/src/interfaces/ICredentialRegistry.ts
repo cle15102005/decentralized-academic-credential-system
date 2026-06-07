@@ -28,6 +28,7 @@ export interface ICredentialRegistryInterface extends Interface {
     nameOrSignature:
       | "addIssuer"
       | "anchor"
+      | "credentialIssuers"
       | "isValidAt"
       | "issuers"
       | "merkleRoots"
@@ -53,6 +54,10 @@ export interface ICredentialRegistryInterface extends Interface {
     values: [BytesLike, BytesLike]
   ): string;
   encodeFunctionData(
+    functionFragment: "credentialIssuers",
+    values: [BytesLike]
+  ): string;
+  encodeFunctionData(
     functionFragment: "isValidAt",
     values: [BytesLike, BigNumberish]
   ): string;
@@ -76,6 +81,10 @@ export interface ICredentialRegistryInterface extends Interface {
 
   decodeFunctionResult(functionFragment: "addIssuer", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "anchor", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "credentialIssuers",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "isValidAt", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "issuers", data: BytesLike): Result;
   decodeFunctionResult(
@@ -203,6 +212,12 @@ export interface ICredentialRegistry extends BaseContract {
     "nonpayable"
   >;
 
+  credentialIssuers: TypedContractMethod<
+    [credentialHash: BytesLike],
+    [string],
+    "view"
+  >;
+
   isValidAt: TypedContractMethod<
     [credentialHash: BytesLike, timestamp: BigNumberish],
     [boolean],
@@ -245,6 +260,9 @@ export interface ICredentialRegistry extends BaseContract {
     [void],
     "nonpayable"
   >;
+  getFunction(
+    nameOrSignature: "credentialIssuers"
+  ): TypedContractMethod<[credentialHash: BytesLike], [string], "view">;
   getFunction(
     nameOrSignature: "isValidAt"
   ): TypedContractMethod<

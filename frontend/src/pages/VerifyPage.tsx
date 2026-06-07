@@ -1,21 +1,21 @@
 /**
- * VerifyPage.tsx  —  Actor: Employer (Verifier)
+ * frontend/src/pages/VerifyPage.tsx — Employer (Verifier)
  *
- * Mirrors verifier/verifyCredential.ts exactly:
- *   Step 1  ECDSA signature → recover signer address  (off-chain, viem)
- *   Step 2  Issuer registry check                     (on-chain,  registry.issuers)
- *   Step 3  Revocation check                          (on-chain,  registry.revocations)
- *   Step 4  Expiry check                              (off-chain, timestamp)
- *   Step 5  Merkle proof check per course             (on-chain,  verifier.verify)
+ * 5-step verification pipeline (mirrors scripts/verifier/verifyCredential.ts):
+ *   1. recoverSignerAddress  — lib/credential.ts (off-chain ECDSA)
+ *   2. registry.issuers      — on-chain via usePublicClient + constants/contracts
+ *   3. registry.revocations  — on-chain
+ *   4. Expiry                — off-chain timestamp vs proof.expiresAt
+ *   5. Merkle proofs         — standardTreeLeaf (shared/logic) + verifier.verify (on-chain)
  *
- * On-chain calls use usePublicClient() for imperative reads.
+ * Input: proof.json from ProvePage. No wallet required for read-only RPC checks.
  */
 
 import { useState, useRef, useCallback } from 'react'
 import { usePublicClient }               from 'wagmi'
 import type { ProofPackage }             from '@credchain/shared/types'
 import { recoverSignerAddress }          from '../lib/credential'
-import { standardTreeLeaf }             from '../lib/merkle'
+import { standardTreeLeaf }             from '@credchain/shared/logic'
 import { REGISTRY_ABI, REGISTRY_ADDRESS, VERIFIER_ABI, VERIFIER_ADDRESS } from '../constants/contracts'
 
 // ─────────────────────────────────────────────────────────────────
@@ -209,7 +209,6 @@ export default function VerifyPage() {
   // ── Computed ──────────────────────────────────────────────────
   const allPass  = done && steps.every(s => s.status === 'pass')
   const anyFail  = done && steps.some(s => s.status === 'fail')
-  const someIdle = steps.some(s => s.status === 'idle')
 
   // ─────────────────────────────────────────────────────────────
   // Upload screen
@@ -234,9 +233,6 @@ export default function VerifyPage() {
           onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f) }} />
       </div>
       {loadErr && <div className="alert alert-error" style={{ marginTop: 16 }}>⚠ {loadErr}</div>}
-      <div className="alert alert-info" style={{ marginTop: 20 }}>
-        💡 Request proof.json from the candidate. Verification happens on the Hardhat/Sepolia network.
-      </div>
     </div>
   )
 
@@ -293,7 +289,7 @@ export default function VerifyPage() {
           <div style={{ marginTop: 20 }}>
             {!publicClient && (
               <div className="alert alert-warn" style={{ marginBottom: 12, fontSize: 12 }}>
-                Connect wallet or set up network to run on-chain checks.
+                Connect wallet on Sepolia to run on-chain checks.
               </div>
             )}
             <button
@@ -305,11 +301,6 @@ export default function VerifyPage() {
                : done   ? '↺ Re-verify'
                :          '◉ Run Verification'}
             </button>
-            {someIdle && !running && !done && (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8, textAlign: 'center' }}>
-                Steps 2, 3, 5 require a connected RPC (Hardhat node or Sepolia).
-              </p>
-            )}
           </div>
         </div>
 
@@ -340,8 +331,8 @@ export default function VerifyPage() {
               Disclosed Courses
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {proof.disclosedCourses.map(c => (
-                <div key={c.name} style={{
+              {proof.disclosedCourses.map((c, i) => (
+                <div key={`${c.name}-${i}`} style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                   padding: '9px 12px', background: 'var(--bg-surface)',
                   borderRadius: 8, border: '1px solid var(--border)',

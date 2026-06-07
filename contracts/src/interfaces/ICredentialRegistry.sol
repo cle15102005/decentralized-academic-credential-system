@@ -34,5 +34,6 @@ interface ICredentialRegistry {
     function isValidAt(bytes32 credentialHash, uint256 timestamp) external view returns (bool);
     function issuers(address account) external view returns (bool);
     function merkleRoots(bytes32 credentialHash) external view returns (bytes32);
+    function credentialIssuers(bytes32 credentialHash) external view returns (address);
     function revocations(bytes32 credentialHash) external view returns (bool, uint256);
 }

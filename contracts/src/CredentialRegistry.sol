@@ -40,7 +40,7 @@ Functions:
     bytes32 merkleRoot
   )                              onlyIssuer  → stores root, emits event
 
-  revoke(bytes32 credentialHash) onlyOwner   → stores revocation with timestamp
+  revoke(bytes32 credentialHash) onlyIssuer  → only the university that anchored may revoke
 
   isValidAt(
     bytes32 credentialHash,
@@ -82,6 +82,9 @@ contract CredentialRegistry is ICredentialRegistry, Ownable {
     
     // Maps a unique credential hash to its mathematical Merkle Root
     mapping(bytes32 => bytes32) public merkleRoots;
+
+    // Maps credential hash to the university that anchored it (for revoke authorization)
+    mapping(bytes32 => address) public credentialIssuers;
     
     // Maps a unique credential hash to its Revocation status and timestamp
     mapping(bytes32 => Revocation) public revocations;
@@ -128,15 +131,16 @@ contract CredentialRegistry is ICredentialRegistry, Ownable {
     function anchor(bytes32 credentialHash, bytes32 merkleRoot) external onlyIssuer {
         require(merkleRoots[credentialHash] == bytes32(0), "Credential already anchored");
         merkleRoots[credentialHash] = merkleRoot;
+        credentialIssuers[credentialHash] = msg.sender;
         emit CredentialAnchored(credentialHash, merkleRoot, msg.sender);
     }
 
     /**
-     * @dev Revokes a previously anchored credential, recording the exact timestamp.
-     * Unlike simple boolean flags, this proves *when* a student was expelled/revoked.
+     * @dev Revokes a credential. Only the university that anchored it may revoke.
      */
-    function revoke(bytes32 credentialHash) external onlyOwner {
+    function revoke(bytes32 credentialHash) external onlyIssuer {
         require(merkleRoots[credentialHash] != bytes32(0), "Credential does not exist");
+        require(credentialIssuers[credentialHash] == msg.sender, "Only the issuing university can revoke");
         require(!revocations[credentialHash].revoked, "Credential already revoked");
         
         revocations[credentialHash] = Revocation({

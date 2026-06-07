@@ -1,3 +1,22 @@
+/**
+ * scripts/verifier/verifyCredential.ts
+ *
+ * 5-step verification pipeline for a ProofPackage (employer / verifier).
+ *
+ * Steps:
+ *   1. ECDSA — recover signer from credentialHash + signature (off-chain, ethers)
+ *   2. Issuer  — registry.issuers(recovered) must be true (on-chain)
+ *   3. Revoke  — registry.revocations(hash) must be false (on-chain)
+ *   4. Expiry  — now <= expiresAt (off-chain)
+ *   5. Merkle  — anchored root matches + verifier.verify per course (on-chain)
+ *
+ * Actor: Employer (verifier).
+ * Run:   npm run verify -- <proof.json>
+ *
+ * Uses:  @credchain/shared/logic (standardTreeLeaf), @credchain/shared/constants (ABIs)
+ * Browser equivalent: frontend/src/pages/VerifyPage.tsx
+ */
+
 import * as fs from "fs";
 import { ethers } from "ethers";
 import * as dotenv from "dotenv";
@@ -7,10 +26,14 @@ import {
   VERIFIER_ABI,
 } from "@credchain/shared/constants";
 import { ProofPackage, VerificationResult } from "@credchain/shared/types";
-import { standardTreeLeaf } from "../holder/merkleUtils";
+import { standardTreeLeaf } from "@credchain/shared/logic";
 
 dotenv.config();
 
+/**
+ * Run the full verification pipeline and return a structured result.
+ * Used by: CLI main block. Same checks as VerifyPage.run().
+ */
 export async function verifyCredential(
   proofPackage: ProofPackage,
   provider: ethers.Provider,
@@ -41,6 +64,7 @@ export async function verifyCredential(
       result.reason = "Invalid signature";
       return result;
     }
+    result.issuerAddress = recovered;
   } catch {
     result.reason = "Signature verification failed";
     return result;
@@ -49,8 +73,8 @@ export async function verifyCredential(
   const registry = new ethers.Contract(registryAddress, REGISTRY_ABI, provider);
   const verifier = new ethers.Contract(verifierAddress, VERIFIER_ABI, provider);
 
-  // Step 2 — Issuer check (on-chain)
-  result.issuerAuthorized = await registry.issuers(proofPackage.signerAddress);
+  // Step 2 — Issuer check (on-chain) — use recovered signer, not claimed address
+  result.issuerAuthorized = await registry.issuers(recovered);
   if (!result.issuerAuthorized) {
     result.reason = "Signer is not an authorized issuer";
     return result;
@@ -98,7 +122,6 @@ export async function verifyCredential(
     return result;
   }
 
-  // Step 6 — Aggregate result
   result.valid = true;
   result.reason = "All verification checks passed";
   return result;

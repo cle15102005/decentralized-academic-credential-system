@@ -7,7 +7,7 @@
     "dev": "vite --host",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "demo": "bash ../../scripts/demo.sh"
+    "demo": "bash ../scripts/demo.sh"
   },
   "dependencies": {
     "@credchain/shared": "*",

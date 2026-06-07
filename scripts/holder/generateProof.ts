@@ -1,46 +1,25 @@
+/**
+ * scripts/holder/generateProof.ts
+ *
+ * CLI wrapper around @credchain/shared/merkle → generateProofFromCourses().
+ * Prints Merkle proofs for selected courses to stdout (preview before export).
+ *
+ * Actor: Student (holder) — after issuer:sign / holder:tree.
+ * Run:   npm run holder:proof -- <credential.json> <courseName> [courseName...]
+ *
+ * Browser equivalent: frontend/src/pages/ProvePage.tsx → handleGenerate()
+ */
+
 import { Course, DisclosedCourse } from "@credchain/shared/types";
-import { buildMerkleTree, MerkleTreeResult } from "./buildMerkleTree";
+import {
+  buildMerkleTree,
+  generateProof,
+  generateProofFromCourses,
+  type MerkleTreeResult,
+} from "@credchain/shared/merkle";
 
-export function generateProof(
-  treeResult: MerkleTreeResult,
-  selectedCourseNames: string[]
-): DisclosedCourse[] {
-  const { tree, courses } = treeResult;
-
-  if (selectedCourseNames.length === 0) {
-    throw new Error("At least one course must be selected for disclosure");
-  }
-
-  const courseByName = new Map(courses.map((c) => [c.name, c]));
-  const disclosed: DisclosedCourse[] = [];
-
-  for (const name of selectedCourseNames) {
-    const course = courseByName.get(name);
-    if (!course) {
-      throw new Error(`Course not found in credential: ${name}`);
-    }
-
-    const leafIndex = tree.leafLookup([course.name, course.grade, course.salt]);
-    const proof = tree.getProof(leafIndex);
-
-    disclosed.push({
-      name: course.name,
-      grade: course.grade,
-      salt: course.salt,
-      proof,
-    });
-  }
-
-  return disclosed;
-}
-
-export function generateProofFromCourses(
-  courses: Course[],
-  selectedCourseNames: string[]
-): DisclosedCourse[] {
-  const treeResult = buildMerkleTree(courses);
-  return generateProof(treeResult, selectedCourseNames);
-}
+export type { MerkleTreeResult };
+export { buildMerkleTree, generateProof, generateProofFromCourses };
 
 if (require.main === module) {
   const fs = require("fs");

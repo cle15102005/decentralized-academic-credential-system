@@ -1,21 +1,28 @@
-// shared/constants.ts
+/**
+ * shared/constants.ts
+ *
+ * Deployed contract addresses and JSON ABIs for CredentialRegistry + MerkleVerifier.
+ *
+ * Used by:
+ *   - scripts/issuer/anchorCredential.ts, scripts/verifier/verifyCredential.ts  (ethers Contract)
+ *   - frontend/src/constants/contracts.ts  (re-exports ABIs + env-based addresses)
+ *
+ * After deploying locally or to Sepolia, update CONTRACT_ADDRESSES here and/or
+ * set REGISTRY_ADDRESS / VERIFIER_ADDRESS in scripts/.env and frontend/.env.
+ */
 
 export const CONTRACT_ADDRESSES = {
-  // My honies, run this command to deploy on your local Hardhat network to test your next code: 
-  // terminal 1: "cd contracts; npx hardhat node" (1 command not 2)
-  // terminal 2: "cd contracts; npx hardhat run ../scripts/deploy/deploy.ts --network localhost"
-  // After you deploy, copy the addresses from the terminal output and paste them into the "local" section below
-
   local: {
-    registry: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", // This is just a test address from the local Hardhat network, it will be different for each of you when you deploy
+    registry: "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
     verifier: "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-  }, 
+  },
   sepolia: {
-    registry: "0x8AF83A4F2d5B4584d6cb9C85b5D018326eb94cf3", // We will fill this in later when deploying to the live testnet
-    verifier: "0x0F79D6c7B3BC1138fb47318c77FfD777057d3241"
+    registry: "0x8941E7ad8b0831e12045D6A6359e141414812613",
+    verifier: "0x6b1442240a00abA0db114a977392a2d20ac55d52"
   }
 };
 
+/** MerkleVerifier.sol — pure proof verification (verify, hashLeaf). */
 export const VERIFIER_ABI = [
   {
     "inputs": [
@@ -41,6 +48,7 @@ export const VERIFIER_ABI = [
   }
 ];
 
+/** CredentialRegistry.sol — issuer whitelist, anchor, revocation. */
 export const REGISTRY_ABI = [
   {
     "inputs": [{ "internalType": "address", "name": "initialOwner", "type": "address" }],

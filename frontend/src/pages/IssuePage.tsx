@@ -1,21 +1,23 @@
 /**
- * IssuePage.tsx  —  Actor: University (Issuer)
+ * frontend/src/pages/IssuePage.tsx — University (Issuer)
  *
- * Real flow (mirrors scripts/issuer/ + scripts/holder/buildMerkleTree):
- *   1. Verify wallet is registered issuer (on-chain)
- *   2. Fill form: studentName, studentId, university, graduationDate, courses
- *   3. buildCredentialBundle() → CredentialBundle (placeholder salts)
- *   4. buildMerkleTree()       → replace salts + compute merkleRoot
- *   5. signAndBuildCredential() → ECDSA sign → SignedCredential
- *   6. anchor(credentialHash, merkleRoot) → on-chain tx
- *   7. Download SignedCredential JSON
+ * Full issue flow in the browser (mirrors scripts/issuer/* + holder/buildMerkleTree):
+ *   1. useIsIssuer          — on-chain issuer whitelist check (hooks/useRegistry)
+ *   2. Form input           — student fields + courses
+ *   3. buildCredentialBundle — @credchain/shared/logic
+ *   4. buildMerkleTree      — @credchain/shared/merkle (random salts + root)
+ *   5. signAndBuildCredential — lib/credential.ts (MetaMask EIP-191 sign)
+ *   6. useAnchor            — registry.anchor(hash, root) on-chain tx
+ *   7. Download             — SignedCredential JSON for the student
  */
 
 import { useState, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { useAccount, useWalletClient } from 'wagmi'
 import type { SignedCredential } from '@credchain/shared/types'
-import { buildCredentialBundle, signAndBuildCredential } from '../lib/credential'
-import { buildMerkleTree }                               from '../lib/merkle'
+import { buildCredentialBundle }                         from '@credchain/shared/logic'
+import { buildMerkleTree }                               from '@credchain/shared/merkle'
+import { signAndBuildCredential }                        from '../lib/credential'
 import { useIsIssuer, useAnchor }                       from '../hooks/useRegistry'
 
 // ─── Local form types ────────────────────────────────────────────
@@ -118,8 +120,9 @@ export default function IssuePage() {
     <div className="animate-fade-up">
       <PageHeader />
       <div className="alert alert-error" style={{ marginTop: 24 }}>
-        ⚠ Address <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{address}</code> is
-        not a registered issuer. Ask the contract owner to call <code>addIssuer()</code>.
+        ⚠ Wallet <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{address}</code> is
+        not registered as an issuer. Ask the contract owner to add it on the{' '}
+        <Link to="/admin" style={{ color: 'var(--cyan)' }}>Registry</Link> page.
       </div>
     </div>
   )
@@ -165,6 +168,7 @@ export default function IssuePage() {
   )
 
   // ── Main form ──────────────────────────────────────────────────
+  const issuerReady = !checkingIssuer && isIssuer === true
   const busy = step === 'signing' || step === 'anchoring' || isPending || isConfirming
 
   return (
@@ -213,7 +217,7 @@ export default function IssuePage() {
           </Field>
         </div>
         <div className="alert alert-info" style={{ marginTop: 14, fontSize: 13 }}>
-          💡 Expiry is auto-set to graduation date + 50 years (matches scripts logic).
+          Expiry is set automatically to graduation date + 50 years.
         </div>
       </section>
 
@@ -260,14 +264,13 @@ export default function IssuePage() {
       <section className="card">
         <SecTitle n="03" t="Sign &amp; Anchor On-Chain" />
         <div className="alert alert-info" style={{ marginTop: 16 }}>
-          Each course gets a random 32-byte salt → Merkle tree built → credentialHash signed
-          with EIP-191 → <code style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>registry.anchor(hash, root)</code> called.
+          Each course gets a unique salt, then the credential is signed and anchored on-chain.
         </div>
         <div style={{ marginTop: 20 }}>
           <button
             className="btn btn-primary btn-lg"
             onClick={handleIssue}
-            disabled={busy}
+            disabled={busy || !issuerReady}
           >
             {busy ? '⌛ Processing…' : '✦ Issue Credential'}
           </button>

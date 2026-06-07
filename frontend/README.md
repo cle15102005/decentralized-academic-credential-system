@@ -1,175 +1,371 @@
-# CredChain Frontend — Huy's Task
+# CredChain Frontend
 
-> **Frontend + Integration + Docs**
-> Part of: Decentralized Academic Credential System with Selective Disclosure
-> HUST Blockchain Capstone 2025.2
+React web application for the full credential lifecycle: **Owner → University → Student → Employer**.
 
----
+This is the **recommended interface for demos and presentations**. No terminal required after setup.
 
-## What's in this folder
-
-```
-frontend/
-├── src/
-│   ├── lib/
-│   │   ├── credential.ts     Browser port of scripts/issuer/ (build + sign)
-│   │   └── merkle.ts         Browser port of scripts/holder/ (tree + proof)
-│   ├── constants/
-│   │   └── contracts.ts      Real ABIs from shared/constants.ts
-│   ├── hooks/
-│   │   └── useRegistry.ts    wagmi hooks for CredentialRegistry
-│   ├── pages/
-│   │   ├── HomePage.tsx      Landing / quick-start
-│   │   ├── IssuePage.tsx     University flow
-│   │   ├── ProvePage.tsx     Student flow
-│   │   └── VerifyPage.tsx    Employer 5-step verification
-│   ├── components/
-│   │   ├── Layout.tsx        Nav + wrapper
-│   │   └── WalletConnect.tsx MetaMask connect button
-│   ├── App.tsx               Router + Wagmi + ReactQuery providers
-│   ├── wagmi.config.ts       Chain config (Hardhat local + Sepolia)
-│   └── index.css             Design system (dark cyber theme)
-├── .env.example              Env var template
-└── package.json              deps: wagmi v2, viem, ethers v6, @openzeppelin/merkle-tree
-```
+See also: [Project overview](../README.md) · [Scripts / CLI](../scripts/README.md)
 
 ---
 
-## Quick Start (Full Demo)
+## Table of contents
+
+1. [Setup](#1-setup)
+2. [MetaMask configuration](#2-metamask-configuration)
+3. [Application map](#3-application-map)
+4. [Demo walkthrough](#4-demo-walkthrough)
+5. [Admin (Owner)](#5-admin-owner)
+6. [Issue (University)](#6-issue-university)
+7. [Credentials (University)](#7-credentials-university)
+8. [Prove (Student)](#8-prove-student)
+9. [Verify (Employer)](#9-verify-employer)
+10. [Environment variables](#10-environment-variables)
+11. [Troubleshooting](#11-troubleshooting)
+
+---
+
+## 1. Setup
+
+### Prerequisites
+
+- Node.js 18+
+- MetaMask browser extension
+- Sepolia ETH on two wallets: **owner** (deployer) and **university** (issuer)
+
+### Install and run
 
 ```bash
-# From project root — one command does everything:
-bash scripts/demo.sh
+# From repo root
+npm install
+
+# Deploy contracts once (if not done yet)
+# Set contracts/.env: PRIVATE_KEY, SEPOLIA_RPC_URL
+npm run deploy:sepolia
+
+# Configure frontend
+cp frontend/.env.example frontend/.env
 ```
 
-Or manually:
+Edit `frontend/.env`:
+
+```env
+VITE_NETWORK=sepolia
+VITE_REGISTRY_ADDRESS=0x...   # from deploy output
+VITE_VERIFIER_ADDRESS=0x...   # from deploy output
+```
 
 ```bash
-# Terminal 1: Start local chain
-cd contracts && npx hardhat node
-
-# Terminal 2: Deploy contracts
-cd contracts && npx hardhat run ../scripts/deploy/deploy.ts --network localhost
-
-# Copy the two addresses printed above into frontend/.env:
-# VITE_REGISTRY_ADDRESS=0x...
-# VITE_VERIFIER_ADDRESS=0x...
-
-# Terminal 3: Start UI
-cd frontend && npm install && npm run dev
+npm run frontend
 ```
+
+Open **http://localhost:5173**
+
+> Restart the dev server after any `.env` change.
 
 ---
 
-## MetaMask Setup
+## 2. MetaMask configuration
+
+### Sepolia (default)
+
+1. MetaMask → **Networks** → enable **Sepolia test network**
+2. Import or select:
+   - **Owner wallet** — same private key as `PRIVATE_KEY` in `contracts/.env`
+   - **University wallet** — a separate account you will register as issuer
+
+### Localhost (optional)
 
 | Field | Value |
 |-------|-------|
-| Network Name | Localhost |
-| RPC URL | http://127.0.0.1:8545 |
-| Chain ID | 31337 |
+| Network name | Localhost |
+| RPC URL | `http://127.0.0.1:8545` |
+| Chain ID | `31337` |
 | Currency | ETH |
 
-**Hardhat test accounts:**
+Set `VITE_NETWORK=localhost` in `frontend/.env` and run `npm run node` + `npm run deploy`.
 
-| Role | Account # | Private Key |
-|------|-----------|-------------|
-| Owner (deploy) | #0 | `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` |
-| Issuer (university) | #1 | `0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d` |
+---
 
-After deploying, register the issuer wallet:
-```bash
-# In hardhat console or a quick script:
-await registry.addIssuer("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
+## 3. Application map
+
+```mermaid
+flowchart TB
+  HOME["Home /"]
+  ADMIN["Admin /admin (Owner)"]
+  ISSUE["Issue /issue (University)"]
+  CRED["Credentials /credentials (University)"]
+  PROVE["Prove /prove (Student)"]
+  VERIFY["Verify /verify (Employer)"]
+
+  HOME --> ADMIN
+  HOME --> ISSUE
+  HOME --> CRED
+  HOME --> PROVE
+  HOME --> VERIFY
+
+  ADMIN -->|addIssuer| CHAIN[(Blockchain)]
+  ISSUE -->|sign + anchor| CHAIN
+  CRED -->|view / revoke| CHAIN
+  PROVE -->|off-chain proof| FILE[proof.json]
+  VERIFY -->|read chain + verify| CHAIN
+  FILE --> VERIFY
+```
+
+| Page | Route | Wallet required? | Role |
+|------|-------|------------------|------|
+| Home | `/` | No | Overview |
+| Admin | `/admin` | Yes — **owner** | Register universities |
+| Issue | `/issue` | Yes — **university** | Create credential |
+| Credentials | `/credentials` | Yes — **university** | List / revoke |
+| Prove | `/prove` | No | Selective disclosure |
+| Verify | `/verify` | No | Validate proof |
+
+### Navigation bar (illustration)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ [CredChain]  Issue  Credentials  Prove  Verify  Admin     ⬡ 0x5FcA… Sepolia │
+│              Univ   Univ         Student Employer Owner                      │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Demo Walkthrough
+## 4. Demo walkthrough
 
-### Step 1 — Issue (University wallet)
-1. Connect MetaMask with Account #1 (issuer)
+Complete flow in order:
+
+```mermaid
+sequenceDiagram
+  participant O as Owner
+  participant U as University
+  participant S as Student
+  participant E as Employer
+
+  O->>O: /admin — Add university wallet
+  U->>U: /issue — Fill form, sign, anchor
+  U->>S: Download signed credential JSON
+  S->>S: /prove — Select courses, export proof
+  S->>E: Send proof.json
+  E->>E: /verify — Upload proof, run checks
+```
+
+| Step | Who | Page | Output |
+|------|-----|------|--------|
+| 0 | Owner | `/admin` | University registered on-chain |
+| 1 | University | `/issue` | `STU001_signed.json` |
+| 2 | Student | `/prove` | `proof_<hash>.json` |
+| 3 | Employer | `/verify` | Pass / fail report |
+
+---
+
+## 5. Admin (Owner)
+
+**Purpose:** Register which wallet addresses may issue credentials.
+
+### UI layout
+
+```
+┌─ Deployment ─────────────────────────────────────────────────┐
+│ Network: Sepolia    Registry: 0x8941…    Owner: 0x5FcA…      │
+│ ✓ CONTRACT OWNER CONNECTED                                   │
+└──────────────────────────────────────────────────────────────┘
+
+┌─ Registered Universities (0) ──────────────────── [↺ Refresh]┐
+│ No universities yet — paste a wallet address below.          │
+│                                                              │
+│ [ 0x70997970C51812dc3A010C7d01b50e0d17dc79C8            ]   │
+│                                    [ + Add University ]      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Steps
+
+1. Connect MetaMask with the **deployer / owner** wallet
+2. Confirm badge: **✓ Contract owner connected**
+3. Paste the **university** wallet address (not the owner address)
+4. Click **+ Add University**
+5. Confirm transaction in MetaMask
+6. University appears in the list
+
+> The list is stored in this browser after adding. Use the same browser for demo, or set `VITE_KNOWN_ISSUERS` in `.env`.
+
+---
+
+## 6. Issue (University)
+
+**Purpose:** Build, sign, and anchor a student credential.
+
+### UI layout
+
+```
+┌─ Issue Credential ───────────────────────────────────────────┐
+│ ✓ Registered issuer                                          │
+│                                                              │
+│ Student Name    [ Nguyen Van A        ]                      │
+│ Student ID      [ STU001              ]                      │
+│ University      [ HUST                ]                      │
+│ Graduation Date [ 2025-06-01          ]                      │
+│                                                              │
+│ Courses:                                                     │
+│   [ Blockchain Fundamentals ] [ A+ ]  [×]                    │
+│   [ Web Development         ] [ A  ]  [×]                    │
+│   [ + Add course ]                                           │
+│                                                              │
+│              [ Issue Credential ]                            │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Steps
+
+1. Switch MetaMask to the **university** wallet (registered in Admin)
 2. Open **/issue**
-3. Fill: Student Name, Student ID, University, Graduation Date
-4. Add courses (Name + Grade)
-5. Click **Issue Credential** → MetaMask prompts:
-   - `personal_sign` for ECDSA signature
-   - `eth_sendTransaction` for `registry.anchor(credentialHash, merkleRoot)`
-6. Download `STU001_signed.json`
-
-### Step 2 — Prove (Student)
-1. Open **/prove** (no wallet needed)
-2. Upload `STU001_signed.json`
-3. Select only the courses you want to reveal
-4. Click **Generate Proof** → Merkle proofs computed in browser
-5. Download `proof_<hash>.json`
-
-### Step 3 — Verify (Employer)
-1. Open **/verify** (wallet recommended for RPC access)
-2. Upload `proof_<hash>.json`
-3. Click **Run Verification** — 5 steps run:
-   - ① ECDSA ecrecover (off-chain)
-   - ② `registry.issuers(addr)` (on-chain)
-   - ③ `registry.revocations(hash)` (on-chain)
-   - ④ Expiry timestamp (off-chain)
-   - ⑤ `verifier.verify(proof, root, leaf)` per course (on-chain)
+3. Wait for **✓ Registered issuer**
+4. Fill student details and courses
+5. Click **Issue Credential**
+6. MetaMask prompts:
+   - **Sign message** (EIP-191 over credential hash)
+   - **Confirm transaction** (`registry.anchor`)
+7. Download **`{studentId}_signed.json`** — give this file to the student
 
 ---
 
-## Architecture
+## 7. Credentials (University)
+
+**Purpose:** View credentials anchored by your wallet and revoke if needed.
+
+### UI layout
 
 ```
-IssuePage
-  ├── buildCredentialBundle()     lib/credential.ts  (browser port of scripts/issuer/buildCredential.ts)
-  ├── buildMerkleTree()           lib/merkle.ts       (browser port of scripts/holder/buildMerkleTree.ts)
-  ├── signAndBuildCredential()    lib/credential.ts  (EIP-191, walletClient.signMessage)
-  └── useAnchor()                 hooks/useRegistry.ts → registry.anchor(hash, root)
+┌─ My Anchored Credentials ──────────────────────── [↺ Refresh]┐
+│ Lookup by hash: [ 0xabc…                          ] [Search] │
+│                                                              │
+│ ┌──────────────────────────────────────────────────────────┐ │
+│ │ STU001  credentialHash: 0x1a2b…   [ Revoke ]           │ │
+│ └──────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
 
-ProvePage
-  ├── buildMerkleTree()           lib/merkle.ts      (rebuilds tree from existing salts)
-  └── generateProof()             lib/merkle.ts      (StandardMerkleTree.getProof)
+Connect the **university** wallet. Only credentials issued by that address are listed.
 
-VerifyPage
-  ├── recoverSignerAddress()      lib/credential.ts  (viem recoverMessageAddress)
-  ├── publicClient.readContract() → registry.issuers()
-  ├── publicClient.readContract() → registry.revocations()
-  ├── expiry check                off-chain
-  ├── publicClient.readContract() → registry.merkleRoots()
-  └── publicClient.readContract() → verifier.verify(proof, root, leaf) × n
+---
+
+## 8. Prove (Student)
+
+**Purpose:** Select which courses to reveal; generate a Merkle proof file.
+
+**No wallet required.**
+
+### UI layout
+
+```
+┌─ Prove Credential ───────────────────────────────────────────┐
+│ [ Upload signed credential JSON ]                            │
+│                                                              │
+│ Select courses to disclose:                                  │
+│   ☑ Blockchain Fundamentals  (A+)                            │
+│   ☑ Web Development          (A)                             │
+│   ☐ Database Systems         (B+)   ← hidden from employer   │
+│                                                              │
+│              [ Generate Proof ]                              │
+│              [ ↓ Download proof.json ]                       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Steps
+
+1. Open **/prove**
+2. Upload the signed credential from Issue step
+3. Check only the courses to share
+4. **Generate Proof** → **Download** `proof_<hash>.json`
+5. Send proof file to employer (email, USB, etc.)
+
+---
+
+## 9. Verify (Employer)
+
+**Purpose:** Validate signature, issuer status, revocation, expiry, and Merkle proofs.
+
+**No wallet required** (reads Sepolia via public RPC).
+
+### UI layout
+
+```
+┌─ Verify Credential ──────────────────────────────────────────┐
+│ [ Upload proof.json ]                                        │
+│                                                              │
+│              [ Run Verification ]                            │
+│                                                              │
+│ ┌─ Results ────────────────────────────────────────────────┐ │
+│ │ ✓ Signature valid                                        │ │
+│ │ ✓ Issuer authorized                                      │ │
+│ │ ✓ Not revoked                                            │ │
+│ │ ✓ Not expired                                            │ │
+│ │ ✓ Merkle proofs valid (2 courses)                        │ │
+│ │                                                          │ │
+│ │ Disclosed: Blockchain Fundamentals A+, Web Development A │ │
+│ └──────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Verification pipeline
+
+```mermaid
+flowchart TD
+  A[Upload proof.json] --> B{Signature OK?}
+  B -->|No| FAIL[Invalid]
+  B -->|Yes| C{Issuer whitelisted?}
+  C -->|No| FAIL
+  C -->|Yes| D{Revoked?}
+  D -->|Yes| FAIL
+  D -->|No| E{Expired?}
+  E -->|Yes| FAIL
+  E -->|No| F{Merkle proofs on-chain?}
+  F -->|No| FAIL
+  F -->|Yes| PASS[Valid credential]
 ```
 
 ---
 
-## Key Implementation Notes
+## 10. Environment variables
 
-**Merkle tree algorithm** (matches scripts exactly):
-```
-leaf = keccak256(keccak256(abi.encode(courseName, grade, salt)))
-```
-`StandardMerkleTree` double-hashes internally. `standardTreeLeaf()` in `lib/merkle.ts` mirrors `scripts/holder/merkleUtils.ts → standardTreeLeaf()`.
-
-**Credential hash** (deterministic):
-```
-credentialHash = keccak256(JSON.stringify(sortObjectKeys(bundleWithoutHash)))
-```
-Mirrors `scripts/issuer/buildCredential.ts → computeCredentialHash()`.
-
-**Signing** (EIP-191):
-```
-signature = wallet.signMessage(getBytes(credentialHash))
-```
-`walletClient.signMessage({ message: { raw: toBytes(hash) } })` is equivalent.
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_NETWORK` | Yes | `sepolia` or `localhost` |
+| `VITE_REGISTRY_ADDRESS` | Yes | `CredentialRegistry` address |
+| `VITE_VERIFIER_ADDRESS` | Yes | `MerkleVerifier` address |
+| `VITE_SEPOLIA_RPC_URL` | No | Custom RPC (default: publicnode) |
+| `VITE_REGISTRY_DEPLOY_BLOCK` | No | Optional — load old issuer list from events |
+| `VITE_KNOWN_ISSUERS` | No | Comma-separated issuer addresses |
 
 ---
 
-## Environment Variables
+## 11. Troubleshooting
 
-| Variable | Description |
-|----------|-------------|
-| `VITE_REGISTRY_ADDRESS` | Deployed `CredentialRegistry` address |
-| `VITE_VERIFIER_ADDRESS` | Deployed `MerkleVerifier` address |
-| `VITE_NETWORK` | `localhost` or `sepolia` |
+| Problem | Solution |
+|---------|----------|
+| Add University does nothing | Paste full `0x…` address first; confirm MetaMask popup |
+| Not contract owner | Use deployer wallet (`PRIVATE_KEY` from `contracts/.env`) |
+| Issuer not registered | Owner must add university on `/admin` first |
+| Wrong network | Switch MetaMask to Sepolia; use button on Admin page |
+| Issue page: not registered issuer | Connect university wallet, not owner |
+| Verify fails: not anchored | Re-issue credential; check `VITE_REGISTRY_ADDRESS` matches deploy |
+| `.env` changes ignored | Restart `npm run frontend` |
+| RPC / log errors on Admin | Optional: set `VITE_SEPOLIA_RPC_URL` to Alchemy/Infura |
 
 ---
 
-*Huy — Frontend + Integration + Docs — HUST 2025*
+## Architecture (frontend)
+
+```
+IssuePage     → shared/logic + shared/merkle + lib/credential.ts + useAnchor
+ProvePage     → shared/merkle (rebuild tree, generate proof)
+VerifyPage    → lib/credential.ts + publicClient.readContract
+AdminPage     → walletClient.writeContract (addIssuer / removeIssuer)
+CredentialsPage → registryEvents (anchored credentials by issuer)
+```
+
+Shared crypto ensures the browser produces **identical hashes and proofs** as the CLI scripts.
+
+---
+
